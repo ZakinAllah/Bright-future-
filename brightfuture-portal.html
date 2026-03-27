@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BrightFuture University Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --navy:#05122b; --navy-mid:#0a1f4e; --blue:#1848c8; --blue-light:#2f67f6;
+  --accent:#FFD700; --sky:#e8f0ff; --white:#fff; --gray:#6b7a99;
+  --text:#0f1c3f; --border:#dde5f5; --success:#059669; --danger:#dc2626;
+  --warning:#d97706; --radius:18px; --radius-sm:10px;
+  --shadow:0 8px 40px rgba(24,72,200,.10); --shadow-hover:0 20px 60px rgba(24,72,200,.18);
+  --tr:.35s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:#f7f9ff;overflow-x:hidden;}
+h1,h2,h3,h4,h5{font-family:'Syne',sans-serif;}
+.container{max-width:1200px;margin:0 auto;padding:0 40px;}
+@media(max-width:768px){.container{padding:0 20px;}}
+
+/* ── UTILITY ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:50px;
+  font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem;cursor:pointer;border:none;
+  text-decoration:none;transition:all var(--tr);}
+.btn:hover{transform:translateY(-2px);}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 4px 20px rgba(24,72,200,.3);}
+.btn-primary:hover{background:var(--blue-light);box-shadow:0 8px 32px rgba(24,72,200,.4);}
+.btn-accent{background:var(--accent);color:var(--navy);box-shadow:0 4px 20px rgba(255,215,0,.3);}
+.btn-accent:hover{box-shadow:0 8px 32px rgba(255,215,0,.5);}
+.btn-danger{background:#fef2f2;color:var(--danger);border:1.5px solid #fecaca;}
+.btn-danger:hover{background:var(--danger);color:#fff;}
+.btn-success{background:#f0fdf4;color:var(--success);border:1.5px solid #bbf7d0;}
+.btn-success:hover{background:var(--success);color:#fff;}
+.btn-outline{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.4);}
+.btn-outline:hover{background:rgba(255,255,255,.1);}
+.btn-ghost{background:#f7f9ff;color:var(--text);border:1.5px solid var(--border);}
+.btn-ghost:hover{background:var(--border);}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:50px;
+  font-size:.75rem;font-weight:700;font-family:'Syne',sans-serif;}
+.badge-pending{background:rgba(217,119,6,.1);color:var(--warning);}
+.badge-approved{background:rgba(5,150,105,.1);color:var(--success);}
+.badge-rejected{background:rgba(220,38,38,.1);color:var(--danger);}
+.badge-review{background:rgba(24,72,200,.1);color:var(--blue);}
+.section-label{display:inline-block;font-family:'Syne',sans-serif;font-size:.72rem;
+  font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--blue);
+  background:rgba(24,72,200,.08);padding:6px 16px;border-radius:50px;margin-bottom:14px;}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1);}
+.reveal.visible{opacity:1;transform:none;}
+.reveal-delay-1{transition-delay:.1s;} .reveal-delay-2{transition-delay:.2s;} .reveal-delay-3{transition-delay:.3s;}
+.hidden{display:none!important;}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast-container{position:fixed;top:100px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;}
+.toast{background:#fff;border-radius:14px;padding:14px 20px;box-shadow:0 8px 40px rgba(0,0,0,.15);
+  display:flex;align-items:center;gap:12px;font-size:.88rem;font-weight:500;min-width:280px;
+  border-left:4px solid var(--blue);animation:toastIn .4s cubic-bezier(.34,1.56,.64,1) both;}
+.toast.success{border-left-color:var(--success);}
+.toast.error{border-left-color:var(--danger);}
+.toast.warning{border-left-color:var(--warning);}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+
+/* ── NAVBAR ── */
+#navbar{position:fixed;top:0;left:0;right:0;z-index:1000;height:80px;display:flex;align-items:center;
+  transition:background var(--tr),box-shadow var(--tr);}
+#navbar.scrolled{background:rgba(5,18,43,.96);backdrop-filter:blur(20px);box-shadow:0 2px 40px rgba(0,0,0,.3);}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;width:100%;}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:#fff;
+  text-decoration:none;display:flex;align-items:center;gap:10px;}
+.nav-logo-icon{width:36px;height:36px;background:var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none;}
+.nav-links a{color:rgba(255,255,255,.8);text-decoration:none;font-size:.88rem;font-weight:500;
+  position:relative;padding:4px 0;transition:color var(--tr);}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;
+  background:var(--accent);transition:width var(--tr);}
+.nav-links a:hover{color:#fff;}
+.nav-links a:hover::after{width:100%;}
+.nav-actions{display:flex;align-items:center;gap:12px;}
+.btn-nav-login{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);
+  padding:9px 20px;border-radius:50px;font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;
+  cursor:pointer;transition:all var(--tr);text-decoration:none;}
+.btn-nav-login:hover{background:rgba(255,255,255,.1);}
+.btn-nav-apply{background:var(--accent);color:var(--navy);padding:9px 20px;border-radius:50px;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;border:none;
+  transition:all var(--tr);text-decoration:none;}
+.btn-nav-apply:hover{transform:scale(1.04);box-shadow:0 6px 24px rgba(255,215,0,.4);}
+
+/* Profile Dropdown */
+.profile-btn{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);border-radius:50px;padding:6px 16px 6px 6px;
+  cursor:pointer;transition:all var(--tr);color:#fff;font-family:'Syne',sans-serif;font-weight:600;font-size:.85rem;}
+.profile-btn:hover{background:rgba(255,255,255,.15);}
+.profile-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;color:var(--navy);font-weight:800;font-size:.8rem;overflow:hidden;}
+.profile-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-dropdown{position:absolute;top:calc(100% + 12px);right:0;background:#fff;border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);border:1px solid var(--border);min-width:220px;
+  overflow:hidden;opacity:0;pointer-events:none;transform:translateY(-10px);
+  transition:all var(--tr);z-index:100;}
+.profile-dropdown.open{opacity:1;pointer-events:all;transform:none;}
+.dropdown-header{padding:16px 20px;background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;}
+.dropdown-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;}
+.dropdown-email{font-size:.78rem;color:rgba(255,255,255,.6);margin-top:2px;}
+.dropdown-item{display:flex;align-items:center;gap:12px;padding:13px 20px;font-size:.88rem;
+  font-weight:500;cursor:pointer;transition:background var(--tr);color:var(--text);text-decoration:none;}
+.dropdown-item:hover{background:var(--sky);}
+.dropdown-item.danger{color:var(--danger);}
+.dropdown-item.danger:hover{background:#fef2f2;}
+.dropdown-divider{height:1px;background:var(--border);}
+.nav-profile-wrap{position:relative;}
+
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
+.hamburger span{width:24px;height:2px;background:#fff;border-radius:2px;transition:all .3s;}
+.mobile-menu{display:none;position:fixed;top:80px;left:0;right:0;background:rgba(5,18,43,.97);
+  backdrop-filter:blur(20px);padding:24px;z-index:999;flex-direction:column;gap:14px;}
+.mobile-menu.open{display:flex;}
+.mobile-menu a{color:#fff;text-decoration:none;font-size:1rem;font-family:'Syne',sans-serif;
+  font-weight:600;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08);}
+@media(max-width:900px){.nav-links,.nav-actions{display:none;}.hamburger{display:flex;}}
+
+/* ── HERO ── */
+#hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--navy) 0%,#0d2563 50%,#1a3a8c 100%);padding:120px 0 80px;}
+.hero-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.hero-orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.2;}
+.hero-orb-1{width:600px;height:600px;background:#2f67f6;top:-200px;right:-100px;animation:float1 8s ease-in-out infinite;}
+.hero-orb-2{width:400px;height:400px;background:#FFD700;bottom:-100px;left:-100px;animation:float2 10s ease-in-out infinite;}
+.hero-grid{position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);background-size:40px 40px;}
+@keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,30px)}}
+@keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-40px)}}
+.hero-content{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;position:relative;z-index:1;}
+@media(max-width:900px){.hero-content{grid-template-columns:1fr;gap:40px;}}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.12);
+  border:1px solid rgba(255,215,0,.3);color:var(--accent);padding:8px 18px;border-radius:50px;
+  font-size:.78rem;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:1px;text-transform:uppercase;
+  margin-bottom:22px;animation:fadeUp .8s ease both;}
+.hero-badge-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.hero-title{color:#fff;margin-bottom:22px;animation:fadeUp .9s .1s ease both;}
+.hero-title span{color:var(--accent);}
+.hero-subtitle{color:rgba(255,255,255,.7);font-size:1.05rem;line-height:1.75;margin-bottom:34px;animation:fadeUp .9s .2s ease both;}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;animation:fadeUp .9s .3s ease both;}
+.hero-stats{display:flex;gap:28px;margin-top:44px;animation:fadeUp .9s .4s ease both;}
+.hero-stat strong{display:block;font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#fff;}
+.hero-stat span{font-size:.8rem;color:rgba(255,255,255,.5);}
+.hero-card-float{background:rgba(255,255,255,.08);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:28px;color:#fff;animation:fadeUp .9s .2s ease both;}
+.hero-card-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:18px;}
+.dash-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;
+  border-bottom:1px solid rgba(255,255,255,.08);font-size:.86rem;}
+.dash-row:last-child{border-bottom:none;}
+.s-badge{padding:4px 12px;border-radius:50px;font-size:.72rem;font-weight:700;}
+.s-approved{background:rgba(52,211,153,.2);color:#34d399;}
+.s-review{background:rgba(251,191,36,.2);color:#fbbf24;}
+.s-submitted{background:rgba(148,163,184,.2);color:#94a3b8;}
+.float-card{position:absolute;background:white;border-radius:14px;padding:12px 16px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-size:.8rem;font-weight:600;color:var(--text);}
+.float-card-1{bottom:-16px;left:-24px;display:flex;align-items:center;gap:10px;}
+.float-card-2{top:-16px;right:-16px;}
+.float-icon{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1rem;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+
+/* ── PROGRAMS ── */
+#programs{padding:100px 0;background:#fff;}
+.section-header{text-align:center;margin-bottom:56px;}
+.section-header p{color:var(--gray);font-size:1rem;margin-top:10px;}
+.programs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;}
+@media(max-width:1100px){.programs-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.programs-grid{grid-template-columns:1fr;}}
+.program-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);
+  padding:30px 26px;cursor:pointer;position:relative;overflow:hidden;transition:all var(--tr);}
+.program-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--blue),#2f67f6);opacity:0;transition:opacity var(--tr);}
+.program-card:hover{transform:translateY(-7px);box-shadow:var(--shadow-hover);border-color:var(--blue);}
+.program-card:hover::before{opacity:1;}
+.program-card>*{position:relative;z-index:1;}
+.program-card:hover h3,.program-card:hover p,.program-card:hover .program-btn{color:#fff;}
+.program-card:hover .program-btn{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.1);}
+.program-card:hover .prog-icon{background:rgba(255,255,255,.2);}
+.prog-icon{width:52px;height:52px;border-radius:14px;background:rgba(24,72,200,.08);
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:18px;transition:all var(--tr);}
+.program-card h3{font-size:1.05rem;margin-bottom:8px;transition:color var(--tr);}
+.program-card p{color:var(--gray);font-size:.84rem;line-height:1.6;margin-bottom:18px;transition:color var(--tr);}
+.program-btn{display:inline-flex;align-items:center;gap:5px;font-family:'Syne',sans-serif;
+  font-size:.8rem;font-weight:700;color:var(--blue);background:none;border:1.5px solid var(--blue);
+  padding:7px 16px;border-radius:50px;cursor:pointer;transition:all var(--tr);}
+
+/* ── HOW IT WORKS ── */
+#how-it-works{padding:100px 0;background:linear-gradient(135deg,#f0f5ff,#e8f0ff);}
+.steps-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;}
+.steps-wrap::before{content:'';position:absolute;top:44px;left:12.5%;right:12.5%;
+  height:2px;background:linear-gradient(90deg,var(--blue),var(--accent));z-index:0;}
+@media(max-width:900px){.steps-wrap{grid-template-columns:1fr 1fr;gap:20px;}.steps-wrap::before{display:none;}}
+@media(max-width:500px){.steps-wrap{grid-template-columns:1fr;}}
+.step-card{background:#fff;border-radius:var(--radius);padding:32px 22px;text-align:center;
+  position:relative;z-index:1;border:1.5px solid var(--border);margin:0 10px;transition:all var(--tr);}
+.step-card:hover{transform:translateY(-7px);box-shadow:var(--shadow-hover);border-color:var(--blue);}
+.step-num{position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:32px;height:32px;
+  background:var(--blue);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:.82rem;box-shadow:0 4px 16px rgba(24,72,200,.4);}
+.step-icon{font-size:2rem;margin:8px 0 14px;}
+.step-card h3{font-size:.98rem;margin-bottom:8px;}
+.step-card p{color:var(--gray);font-size:.83rem;line-height:1.6;}
+
+/* ── SCHOLARSHIPS ── */
+#scholarships{padding:100px 0;background:#fff;}
+.scholarships-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
+@media(max-width:900px){.scholarships-grid{grid-template-columns:1fr;}}
+.scholarship-card{border-radius:var(--radius);padding:34px 30px;position:relative;overflow:hidden;cursor:pointer;transition:all var(--tr);}
+.sc-1{background:linear-gradient(135deg,#1848c8,#2f67f6);}
+.sc-2{background:linear-gradient(135deg,#0f2f7c,#1848c8);}
+.sc-3{background:linear-gradient(135deg,#05122b,#0a1f4e);}
+.scholarship-card:hover{transform:translateY(-7px);box-shadow:0 24px 60px rgba(24,72,200,.3);}
+.sc-badge{display:inline-block;background:rgba(255,215,0,.2);color:var(--accent);
+  padding:5px 13px;border-radius:50px;font-size:.72rem;font-weight:700;font-family:'Syne',sans-serif;
+  letter-spacing:1px;text-transform:uppercase;margin-bottom:18px;}
+.scholarship-card h3{font-size:1.2rem;color:#fff;margin-bottom:8px;}
+.scholarship-card p{color:rgba(255,255,255,.7);font-size:.86rem;line-height:1.6;margin-bottom:20px;}
+.sc-amount{font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:var(--accent);margin-bottom:20px;}
+.sc-reqs{display:flex;flex-direction:column;gap:7px;margin-bottom:24px;}
+.sc-req{display:flex;align-items:center;gap:9px;font-size:.83rem;color:rgba(255,255,255,.8);}
+.req-dot{width:16px;height:16px;border-radius:50%;background:rgba(52,211,153,.2);color:#34d399;
+  display:flex;align-items:center;justify-content:center;font-size:.6rem;flex-shrink:0;}
+
+/* ── TESTIMONIALS ── */
+#testimonials{padding:100px 0;background:linear-gradient(135deg,#f0f5ff,#e8f0ff);}
+.testimonials-track{overflow:hidden;}
+.testimonials-inner{display:flex;gap:26px;transition:transform .5s cubic-bezier(.4,0,.2,1);}
+.testimonial-card{min-width:300px;max-width:340px;flex-shrink:0;background:#fff;border-radius:var(--radius);
+  padding:32px 28px;border:1.5px solid var(--border);transition:all var(--tr);}
+.testimonial-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-hover);}
+.quote-big{font-size:2.8rem;color:var(--blue);opacity:.12;line-height:1;font-family:Georgia,serif;}
+.test-text{font-size:.92rem;line-height:1.75;margin-bottom:22px;}
+.test-author{display:flex;align-items:center;gap:12px;}
+.test-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;}
+.test-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;}
+.test-role{font-size:.78rem;color:var(--gray);}
+.stars{color:var(--accent);font-size:.82rem;letter-spacing:2px;margin-bottom:12px;}
+.carousel-arrows{display:flex;gap:10px;justify-content:center;margin-top:32px;}
+.carousel-btn{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--border);background:#fff;
+  cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all var(--tr);}
+.carousel-btn:hover{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+/* ── CTA ── */
+#cta{padding:120px 0;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,var(--navy),#0d2563,#1a3a8c);text-align:center;}
+.cta-content{position:relative;z-index:1;max-width:680px;margin:0 auto;}
+.cta-content h2{color:#fff;font-size:clamp(1.8rem,4vw,3rem);margin-bottom:18px;}
+.cta-content p{color:rgba(255,255,255,.7);font-size:1.05rem;margin-bottom:36px;}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+#footer{background:var(--navy);color:rgba(255,255,255,.65);padding:72px 0 0;}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:50px;padding-bottom:56px;}
+@media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;gap:36px;}}
+@media(max-width:500px){.footer-grid{grid-template-columns:1fr;}}
+.footer-brand p{font-size:.86rem;line-height:1.7;margin-top:14px;max-width:270px;}
+.footer-col h4{font-family:'Syne',sans-serif;font-weight:700;color:#fff;margin-bottom:18px;font-size:.92rem;}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.footer-col ul li a{color:rgba(255,255,255,.5);text-decoration:none;font-size:.85rem;transition:color var(--tr);}
+.footer-col ul li a:hover{color:#fff;}
+.footer-ci{display:flex;align-items:flex-start;gap:9px;font-size:.85rem;margin-bottom:10px;}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.08);padding:22px 0;display:flex;
+  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;}
+.footer-bottom p{font-size:.8rem;}
+.social-links{display:flex;gap:10px;}
+.social-link{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.6);text-decoration:none;font-size:.88rem;transition:all var(--tr);}
+.social-link:hover{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+/* ── AUTH MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,18,43,.75);z-index:2000;
+  display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity var(--tr);}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:#fff;border-radius:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  transform:scale(.95) translateY(16px);transition:transform var(--tr);position:relative;}
+.modal-overlay.open .modal{transform:scale(1) translateY(0);}
+.modal-header{background:linear-gradient(135deg,var(--navy),var(--navy-mid));padding:36px 40px 32px;color:#fff;position:relative;}
+.modal-header h2{color:#fff;font-size:1.5rem;margin-bottom:6px;}
+.modal-header p{color:rgba(255,255,255,.6);font-size:.88rem;}
+.modal-close-btn{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,.15);color:#fff;border:none;font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all var(--tr);}
+.modal-close-btn:hover{background:rgba(255,255,255,.25);}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);}
+.auth-tab{flex:1;padding:14px;text-align:center;font-family:'Syne',sans-serif;font-weight:600;
+  font-size:.88rem;cursor:pointer;transition:all var(--tr);color:var(--gray);border-bottom:2px solid transparent;}
+.auth-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.modal-body{padding:32px 40px;}
+@media(max-width:500px){.modal-body{padding:24px 20px;}.modal-header{padding:28px 20px 24px;}}
+.form-group{display:flex;flex-direction:column;gap:7px;margin-bottom:18px;}
+.form-group label{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--navy);}
+.form-input{padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-size:.9rem;font-family:'DM Sans',sans-serif;outline:none;transition:all var(--tr);background:#f7f9ff;color:var(--text);}
+.form-input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(24,72,200,.08);}
+.form-input.error{border-color:var(--danger);animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:#fff;
+  cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;font-size:.88rem;
+  transition:all var(--tr);color:var(--text);margin-bottom:20px;}
+.google-btn:hover{background:#f7f9ff;border-color:#ccc;}
+.google-icon{width:20px;height:20px;}
+.divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--gray);font-size:.82rem;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-submit{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;
+  border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;
+  cursor:pointer;transition:all var(--tr);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;}
+.auth-submit:hover{background:var(--blue-light);}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+
+/* Avatar Upload */
+.avatar-upload-wrap{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
+.avatar-preview{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-light));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Syne',sans-serif;
+  font-weight:800;font-size:1.4rem;overflow:hidden;flex-shrink:0;border:3px solid var(--border);}
+.avatar-preview img{width:100%;height:100%;object-fit:cover;}
+.avatar-upload-btn{flex:1;}
+.avatar-upload-btn label{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;
+  border:1.5px dashed var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.84rem;
+  color:var(--blue);font-weight:600;transition:all var(--tr);}
+.avatar-upload-btn label:hover{border-color:var(--blue);background:var(--sky);}
+.avatar-upload-btn input{display:none;}
+
+/* ── APPLICATION FORM MODAL ── */
+.app-modal{max-width:700px;}
+.app-modal .modal-header h2{font-size:1.3rem;}
+.progress-bar-wrap{display:flex;gap:0;margin-top:28px;}
+.progress-step{flex:1;text-align:center;position:relative;cursor:pointer;}
+.progress-step::after{content:'';position:absolute;top:16px;left:50%;width:100%;height:2px;background:rgba(255,255,255,.15);}
+.progress-step:last-child::after{display:none;}
+.ps-circle{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 7px;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;color:rgba(255,255,255,.5);
+  position:relative;z-index:1;transition:all var(--tr);border:2px solid rgba(255,255,255,.15);}
+.progress-step.active .ps-circle{background:var(--accent);color:var(--navy);border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,215,0,.25);}
+.progress-step.done .ps-circle{background:rgba(52,211,153,.8);color:#fff;border-color:rgba(52,211,153,.8);}
+.ps-label{font-size:.62rem;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.8px;}
+.progress-step.active .ps-label{color:var(--accent);}
+.form-step{display:none;}
+.form-step.active{display:block;animation:fadeUp .35s ease both;}
+.form-step h3{font-size:1.1rem;margin-bottom:22px;color:var(--navy);}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:560px){.form-grid-2{grid-template-columns:1fr;}}
+.full-col{grid-column:1/-1;}
+.upload-area{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:28px;
+  text-align:center;cursor:pointer;transition:all var(--tr);background:#f7f9ff;position:relative;}
+.upload-area:hover{border-color:var(--blue);background:rgba(24,72,200,.03);}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{font-size:1.8rem;margin-bottom:7px;}
+.upload-area p{font-size:.84rem;color:var(--gray);}
+.upload-area strong{color:var(--blue);}
+.review-box{background:#f7f9ff;border-radius:var(--radius-sm);padding:18px 22px;margin-bottom:14px;}
+.review-box-title{font-family:'Syne',sans-serif;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:10px;}
+.review-row{display:flex;justify-content:space-between;padding:6px 0;font-size:.86rem;border-bottom:1px solid var(--border);}
+.review-row:last-child{border-bottom:none;}
+.review-row strong{color:var(--text);}
+.review-row span{color:var(--gray);}
+.payment-placeholder{background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+.payment-placeholder h4{font-size:.9rem;margin-bottom:8px;color:rgba(255,255,255,.7);}
+.pay-amount{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);}
+.pay-url-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  border-radius:var(--radius-sm);color:#fff;font-size:.85rem;margin-top:12px;outline:none;}
+.pay-url-input::placeholder{color:rgba(255,255,255,.4);}
+.success-wrap{text-align:center;padding:16px 0;}
+.check-anim{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#34d399,#059669);
+  display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 22px;
+  animation:popIn .6s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.form-actions{display:flex;justify-content:space-between;margin-top:28px;gap:10px;}
+.btn-back{background:#f7f9ff;color:var(--text);border:1.5px solid var(--border);padding:12px 24px;
+  border-radius:50px;font-family:'Syne',sans-serif;font-weight:600;font-size:.88rem;cursor:pointer;transition:all var(--tr);}
+.btn-back:hover{background:var(--border);}
+.btn-next{background:var(--blue);color:#fff;border:none;padding:12px 32px;border-radius:50px;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;
+  box-shadow:0 4px 20px rgba(24,72,200,.3);transition:all var(--tr);display:flex;align-items:center;gap:7px;}
+.btn-next:hover{background:var(--blue-light);transform:translateY(-2px);}
+
+/* ── DASHBOARD ── */
+#dashboard-view{display:none;min-height:100vh;background:#f0f5ff;padding-top:80px;}
+.dash-topbar{background:linear-gradient(135deg,var(--navy),var(--navy-mid));padding:40px 0 60px;}
+.dash-topbar-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+.dash-welcome{color:#fff;}
+.dash-welcome h2{font-size:1.6rem;margin-bottom:4px;}
+.dash-welcome p{color:rgba(255,255,255,.6);font-size:.9rem;}
+.dash-stats{display:flex;gap:16px;flex-wrap:wrap;}
+.dash-stat-card{background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:18px 24px;color:#fff;min-width:130px;}
+.dash-stat-card strong{display:block;font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;}
+.dash-stat-card span{font-size:.78rem;color:rgba(255,255,255,.6);}
+.dash-content{margin-top:-32px;padding-bottom:60px;}
+.dash-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:24px;}
+.dash-card-header{padding:22px 28px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.dash-card-header h3{font-size:1.05rem;}
+.dash-card-body{padding:28px;}
+.application-item{display:flex;align-items:center;justify-content:space-between;padding:16px 0;
+  border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;}
+.application-item:last-child{border-bottom:none;}
+.app-item-left{display:flex;align-items:center;gap:14px;}
+.app-item-icon{width:44px;height:44px;border-radius:12px;background:var(--sky);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+.app-item-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;}
+.app-item-sub{font-size:.8rem;color:var(--gray);margin-top:2px;}
+.app-item-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.empty-state{text-align:center;padding:48px 20px;color:var(--gray);}
+.empty-state-icon{font-size:3rem;margin-bottom:12px;}
+.empty-state p{font-size:.9rem;}
+
+/* Profile Section */
+.profile-section{display:grid;grid-template-columns:1fr 2fr;gap:24px;}
+@media(max-width:700px){.profile-section{grid-template-columns:1fr;}}
+.profile-avatar-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:32px;text-align:center;}
+.profile-big-avatar{width:100px;height:100px;border-radius:50%;margin:0 auto 16px;overflow:hidden;
+  background:linear-gradient(135deg,var(--blue),var(--blue-light));display:flex;align-items:center;
+  justify-content:center;color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;border:4px solid var(--border);}
+.profile-big-avatar img{width:100%;height:100%;object-fit:cover;}
+.profile-big-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:4px;}
+.profile-big-email{font-size:.82rem;color:var(--gray);}
+.profile-upload-btn{display:inline-flex;align-items:center;gap:7px;margin-top:16px;
+  padding:9px 18px;border:1.5px dashed var(--border);border-radius:50px;cursor:pointer;
+  font-size:.82rem;color:var(--blue);font-weight:600;transition:all var(--tr);}
+.profile-upload-btn:hover{border-color:var(--blue);background:var(--sky);}
+
+/* Download cert button */
+.download-cert-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;
+  background:linear-gradient(135deg,var(--success),#10b981);color:#fff;border:none;
+  border-radius:50px;font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;cursor:pointer;
+  transition:all var(--tr);text-decoration:none;}
+.download-cert-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(5,150,105,.35);}
+
+/* Notification Bell */
+.notif-btn{position:relative;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1rem;transition:all var(--tr);color:#fff;}
+.notif-btn:hover{background:rgba(255,255,255,.2);}
+.notif-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;
+  border-radius:50%;border:2px solid transparent;}
+.notif-panel{position:absolute;top:calc(100% + 10px);right:0;background:#fff;border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);border:1px solid var(--border);width:300px;
+  opacity:0;pointer-events:none;transform:translateY(-8px);transition:all var(--tr);z-index:100;}
+.notif-panel.open{opacity:1;pointer-events:all;transform:none;}
+.notif-header{padding:16px 20px;border-bottom:1px solid var(--border);}
+.notif-header h4{font-size:.9rem;}
+.notif-item{padding:14px 20px;border-bottom:1px solid var(--border);font-size:.84rem;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item strong{display:block;margin-bottom:3px;}
+.notif-item span{color:var(--gray);font-size:.78rem;}
+.notif-empty{padding:24px;text-align:center;color:var(--gray);font-size:.85rem;}
+
+/* ── ADMIN PANEL ── */
+#admin-view{display:none;min-height:100vh;background:#f0f5ff;padding-top:80px;}
+.admin-topbar{background:linear-gradient(135deg,#1a0545,#2d0a6e);padding:36px 0 52px;}
+.admin-topbar h2{color:#fff;font-size:1.5rem;margin-bottom:4px;}
+.admin-topbar p{color:rgba(255,255,255,.6);font-size:.88rem;}
+.admin-content{margin-top:-28px;padding-bottom:60px;}
+.admin-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
+@media(max-width:900px){.admin-stats-row{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:500px){.admin-stats-row{grid-template-columns:1fr 1fr;}}
+.admin-stat{background:#fff;border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);text-align:center;}
+.admin-stat-num{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--blue);}
+.admin-stat-label{font-size:.8rem;color:var(--gray);margin-top:4px;}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.filter-btn{padding:9px 20px;border-radius:50px;border:1.5px solid var(--border);background:#fff;
+  font-family:'Syne',sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;transition:all var(--tr);color:var(--gray);}
+.filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+.filter-btn:hover:not(.active){border-color:var(--blue);color:var(--blue);}
+.search-bar{flex:1;min-width:200px;padding:9px 16px;border:1.5px solid var(--border);border-radius:50px;
+  font-size:.88rem;outline:none;transition:all var(--tr);}
+.search-bar:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,72,200,.08);}
+table{width:100%;border-collapse:collapse;}
+th{padding:13px 22px;text-align:left;background:#f7f9ff;font-family:'Syne',sans-serif;
+  font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);}
+td{padding:15px 22px;border-bottom:1px solid var(--border);font-size:.87rem;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafbff;}
+.table-wrap{overflow-x:auto;}
+
+/* Application Detail Modal */
+.detail-modal{max-width:760px;}
+.detail-section{margin-bottom:24px;}
+.detail-section-title{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.2px;color:var(--gray);margin-bottom:12px;
+  padding-bottom:8px;border-bottom:1.5px solid var(--border);}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:560px){.detail-grid{grid-template-columns:1fr;}}
+.detail-field{background:#f7f9ff;border-radius:var(--radius-sm);padding:12px 16px;}
+.detail-field label{font-size:.72rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px;}
+.detail-field span{font-size:.9rem;font-weight:500;color:var(--text);}
+.action-bar{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:24px;border-top:1.5px solid var(--border);}
+.feedback-area{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif;font-size:.88rem;resize:vertical;outline:none;transition:all var(--tr);}
+.feedback-area:focus{border-color:var(--blue);}
+.cert-upload-area{border:2px dashed var(--border);border-radius:var(--radius-sm);padding:24px;
+  text-align:center;cursor:pointer;transition:all var(--tr);background:#f7f9ff;position:relative;margin-top:12px;}
+.cert-upload-area:hover{border-color:var(--success);background:#f0fdf4;}
+.cert-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.timeline{display:flex;flex-direction:column;gap:0;}
+.timeline-item{display:flex;gap:14px;padding:10px 0;}
+.timeline-dot{width:12px;height:12px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:4px;}
+.timeline-dot.done{background:var(--success);}
+.timeline-dot.active{background:var(--blue);}
+.timeline-line{width:2px;background:var(--border);margin-left:5px;height:20px;}
+
+/* PDF Preview styles (hidden, used for generation) */
+#pdf-preview-content{display:none;}
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ══ NAVBAR ══ -->
+<nav id="navbar">
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" onclick="showLanding()">
+        <span class="nav-logo-icon">🎓</span>
+        BrightFuture University
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#programs" onclick="showLanding()">Programs</a></li>
+        <li><a href="#how-it-works" onclick="showLanding()">Admissions</a></li>
+        <li><a href="#scholarships" onclick="showLanding()">Scholarships</a></li>
+        <li><a href="#" onclick="showLanding()">Contact</a></li>
+      </ul>
+      <div class="nav-actions" id="navActions">
+        <!-- Filled by JS based on auth state -->
+        <button class="btn-nav-login" onclick="openAuthModal('login')">Login</button>
+        <button class="btn-nav-apply" onclick="openAuthModal('signup')">Apply Now</button>
+      </div>
+      <button class="hamburger" onclick="toggleMobileMenu()"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#programs" onclick="closeMobileMenu()">Programs</a>
+  <a href="#how-it-works" onclick="closeMobileMenu()">Admissions</a>
+  <a href="#scholarships" onclick="closeMobileMenu()">Scholarships</a>
+  <a href="#" onclick="openAuthModal('login');closeMobileMenu()">Login</a>
+  <a href="#" onclick="openAuthModal('signup');closeMobileMenu()" style="color:var(--accent)">Apply Now →</a>
+</div>
+
+<!-- ══ LANDING PAGE ══ -->
+<div id="landing-view">
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="hero-grid"></div>
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+  </div>
+  <div class="container">
+    <div class="hero-content">
+      <div>
+        <div class="hero-badge"><span class="hero-badge-dot"></span>Applications Open — 2026 Intake</div>
+        <h1 class="hero-title">Apply to <span>BrightFuture</span><br/>University Today</h1>
+        <p class="hero-subtitle">Explore programs, submit your application online, and track your admission status instantly. Your future starts with a single step.</p>
+        <div class="hero-actions">
+          <button class="btn btn-accent" onclick="handleApplyClick()">Start Application →</button>
+          <a href="#programs" class="btn btn-outline">Explore Programs</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><strong>12,000+</strong><span>Students Enrolled</span></div>
+          <div class="hero-stat"><strong>40+</strong><span>Programs Offered</span></div>
+          <div class="hero-stat"><strong>95%</strong><span>Employment Rate</span></div>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <div class="hero-card-float">
+          <div class="hero-card-title">📋 Student Dashboard</div>
+          <div class="dash-row"><span>Computer Science — Admission</span><span class="s-badge s-approved">Approved</span></div>
+          <div class="dash-row"><span>Merit Scholarship</span><span class="s-badge s-review">Under Review</span></div>
+          <div class="dash-row"><span>Arts & Design</span><span class="s-badge s-submitted">Submitted</span></div>
+        </div>
+        <div class="float-card float-card-1">
+          <div class="float-icon">✅</div>
+          <div><div style="font-weight:700;font-size:.82rem">Application Approved</div><div style="font-size:.73rem;color:var(--gray)">Mar 12, 2026</div></div>
+        </div>
+        <div class="float-card float-card-2">
+          <div style="font-size:.72rem;color:var(--gray)">Scholarship Award</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--blue)">₦500,000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRAMS -->
+<section id="programs">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-label">Our Programs</span>
+      <h2>Choose Your Program</h2>
+      <p>Choose a degree that fits your ambitions and shapes your future.</p>
+    </div>
+    <div class="programs-grid">
+      <div class="program-card reveal"><div class="prog-icon">💻</div><h3>Computer Science</h3><p>Master algorithms, software engineering, and build tomorrow's technology.</p><button class="program-btn" onclick="handleApplyClick()">Apply Now →</button></div>
+      <div class="program-card reveal reveal-delay-1"><div class="prog-icon">📊</div><h3>Business Administration</h3><p>Develop leadership skills and strategic thinking for global markets.</p><button class="program-btn" onclick="handleApplyClick()">Apply Now →</button></div>
+      <div class="program-card reveal reveal-delay-2"><div class="prog-icon">⚙️</div><h3>Engineering</h3><p>Solve real-world problems with engineering excellence and innovation.</p><button class="program-btn" onclick="handleApplyClick()">Apply Now →</button></div>
+      <div class="program-card reveal reveal-delay-3"><div class="prog-icon">🎨</div><h3>Arts & Design</h3><p>Express creativity through design, media arts, and visual storytelling.</p><button class="program-btn" onclick="handleApplyClick()">Apply Now →</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-label">How It Works</span>
+      <h2>Admissions Made Simple</h2>
+      <p>Four easy steps to secure your place at BrightFuture University.</p>
+    </div>
+    <div class="steps-wrap">
+      <div class="step-card reveal"><div class="step-num">1</div><div class="step-icon">📚</div><h3>Select Program</h3><p>Browse and find the degree that aligns with your passion and career goals.</p></div>
+      <div class="step-card reveal reveal-delay-1"><div class="step-num">2</div><div class="step-icon">📄</div><h3>Fill Application</h3><p>Complete our simple multi-step online form with your personal info and documents.</p></div>
+      <div class="step-card reveal reveal-delay-2"><div class="step-num">3</div><div class="step-icon">📡</div><h3>Track Status</h3><p>Monitor your application progress in real-time via your personal dashboard.</p></div>
+      <div class="step-card reveal reveal-delay-3"><div class="step-num">4</div><div class="step-icon">🎓</div><h3>Confirm Admission</h3><p>Receive your acceptance and confirm your enrollment to begin your journey.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- SCHOLARSHIPS -->
+<section id="scholarships">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="section-label">Scholarships</span>
+      <h2>Fund Your Future</h2>
+      <p>Multiple scholarship pathways to make quality education accessible to all.</p>
+    </div>
+    <div class="scholarships-grid">
+      <div class="scholarship-card sc-1 reveal"><div class="sc-badge">⭐ Merit-Based</div><h3>Academic Excellence Award</h3><p>For students with outstanding academic achievements.</p><div class="sc-amount">₦500,000</div><div class="sc-reqs"><div class="sc-req"><div class="req-dot">✓</div>Minimum CGPA of 3.8/4.0</div><div class="sc-req"><div class="req-dot">✓</div>Two recommendation letters</div><div class="sc-req"><div class="req-dot">✓</div>Personal statement essay</div></div><button class="btn btn-accent" onclick="handleApplyClick()">Apply for Scholarship</button></div>
+      <div class="scholarship-card sc-2 reveal reveal-delay-1"><div class="sc-badge">🤝 Need-Based</div><h3>Financial Aid Program</h3><p>Supporting deserving students who demonstrate financial need.</p><div class="sc-amount">₦350,000</div><div class="sc-reqs"><div class="sc-req"><div class="req-dot">✓</div>Financial need documentation</div><div class="sc-req"><div class="req-dot">✓</div>Academic transcripts</div><div class="sc-req"><div class="req-dot">✓</div>Community involvement proof</div></div><button class="btn btn-accent" onclick="handleApplyClick()">Apply for Scholarship</button></div>
+      <div class="scholarship-card sc-3 reveal reveal-delay-2"><div class="sc-badge">🌍 International</div><h3>Global Leaders Scholarship</h3><p>Welcoming exceptional international students to our campus.</p><div class="sc-amount">₦750,000</div><div class="sc-reqs"><div class="sc-req"><div class="req-dot">✓</div>International student status</div><div class="sc-req"><div class="req-dot">✓</div>English proficiency test</div><div class="sc-req"><div class="req-dot">✓</div>Leadership portfolio</div></div><button class="btn btn-accent" onclick="handleApplyClick()">Apply for Scholarship</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="hero-bg"><div class="hero-grid"></div><div class="hero-orb hero-orb-1"></div><div class="hero-orb hero-orb-2"></div></div>
+  <div class="container">
+    <div class="cta-content reveal">
+      <span class="section-label" style="color:var(--accent);background:rgba(255,215,0,.12)">Take the First Step</span>
+      <h2>Ready to Shape Your Future?</h2>
+      <p>Start your BrightFuture University journey today. Thousands of students have already secured their place — will you be next?</p>
+      <div class="cta-actions">
+        <button class="btn btn-accent" onclick="handleApplyClick()">Apply Now →</button>
+        <a href="#footer" class="btn btn-outline">Schedule Campus Tour</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo"><span class="nav-logo-icon">🎓</span><span style="font-family:'Syne',sans-serif;font-weight:800;color:#fff">BrightFuture University</span></a>
+        <p>Empowering the next generation of leaders, innovators, and changemakers through world-class education.</p>
+        <div style="margin-top:16px">
+          <div class="footer-ci">📧 <span>info@brightfuture.edu</span></div>
+          <div class="footer-ci">📞 <span>+234 123 456 7890</span></div>
+          <div class="footer-ci">📍 <span>123 University Road, Lagos, Nigeria</span></div>
+        </div>
+      </div>
+      <div class="footer-col"><h4>University</h4><ul><li><a href="#">About Us</a></li><li><a href="#programs">Programs</a></li><li><a href="#how-it-works">Admissions</a></li><li><a href="#scholarships">Scholarships</a></li><li><a href="#">Campus Life</a></li></ul></div>
+      <div class="footer-col"><h4>Resources</h4><ul><li><a href="#">FAQ</a></li><li><a href="#">Help Center</a></li><li><a href="#">Blog</a></li><li><a href="#">News</a></li><li><a href="#">Events</a></li></ul></div>
+      <div class="footer-col"><h4>Quick Links</h4><ul><li><a href="#" onclick="handleApplyClick()">Apply Online</a></li><li><a href="#" onclick="currentUser&&showDashboard()">Track Application</a></li><li><a href="#scholarships">Scholarships</a></li><li><a href="#">Student Portal</a></li><li><a href="#">Contact Us</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 BrightFuture University. All rights reserved.</p>
+      <div class="social-links">
+        <a href="#" class="social-link">𝕏</a><a href="#" class="social-link">in</a>
+        <a href="#" class="social-link">◉</a><a href="#" class="social-link">f</a>
+      </div>
+    </div>
+  </div>
+</footer>
+</div><!-- /landing-view -->
+
+<!-- ══ STUDENT DASHBOARD ══ -->
+<div id="dashboard-view">
+  <div class="dash-topbar">
+    <div class="container">
+      <div class="dash-topbar-inner">
+        <div class="dash-welcome">
+          <h2 id="dashWelcome">Welcome back!</h2>
+          <p>Track your applications and manage your profile</p>
+        </div>
+        <div class="dash-stats">
+          <div class="dash-stat-card"><strong id="statTotal">0</strong><span>Total Applications</span></div>
+          <div class="dash-stat-card"><strong id="statPending">0</strong><span>Under Review</span></div>
+          <div class="dash-stat-card"><strong id="statApproved">0</strong><span>Approved</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-content">
+    <div class="container">
+      <!-- Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="filter-btn active" onclick="switchDashTab('applications',this)">📋 My Applications</button>
+        <button class="filter-btn" onclick="switchDashTab('profile',this)">👤 Profile</button>
+        <button class="filter-btn" onclick="switchDashTab('notifications',this)">🔔 Notifications</button>
+      </div>
+
+      <!-- Applications Tab -->
+      <div id="dashTabApplications">
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <h3>My Applications</h3>
+            <button class="btn btn-primary" onclick="openAppModal()" style="padding:9px 20px;font-size:.84rem">+ New Application</button>
+          </div>
+          <div class="dash-card-body" id="applicationsListUser">
+            <div class="empty-state"><div class="empty-state-icon">📂</div><p>No applications yet.<br/>Click "New Application" to get started.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Tab -->
+      <div id="dashTabProfile" style="display:none">
+        <div class="profile-section">
+          <div class="profile-avatar-card">
+            <div class="profile-big-avatar" id="profileBigAvatar">?</div>
+            <div class="profile-big-name" id="profileBigName">—</div>
+            <div class="profile-big-email" id="profileBigEmail">—</div>
+            <label class="profile-upload-btn">
+              📷 Change Photo
+              <input type="file" accept="image/*" onchange="uploadProfilePicture(this)"/>
+            </label>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-header"><h3>Profile Information</h3></div>
+            <div class="dash-card-body">
+              <div class="form-group"><label>Full Name</label><input type="text" class="form-input" id="profileName" placeholder="Your full name"/></div>
+              <div class="form-group"><label>Email</label><input type="email" class="form-input" id="profileEmail" disabled style="background:#f0f5ff"/></div>
+              <div class="form-group"><label>Phone Number</label><input type="text" class="form-input" id="profilePhone" placeholder="+234 xxx xxx xxxx"/></div>
+              <div class="form-group"><label>Address</label><input type="text" class="form-input" id="profileAddress" placeholder="Your address"/></div>
+              <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div id="dashTabNotifications" style="display:none">
+        <div class="dash-card">
+          <div class="dash-card-header"><h3>Notifications</h3></div>
+          <div class="dash-card-body" id="notificationsListUser">
+            <div class="empty-state"><div class="empty-state-icon">🔔</div><p>No notifications yet.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN PANEL ══ -->
+<div id="admin-view">
+  <div class="admin-topbar">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+        <div>
+          <p style="color:rgba(255,255,255,.5);font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Administration</p>
+          <h2 style="color:#fff;font-size:1.5rem">Admin Control Panel</h2>
+          <p style="color:rgba(255,255,255,.5);font-size:.86rem">BrightFuture University — Admissions Management</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="filter-btn active" onclick="switchAdminTab('applications',this)" style="border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.8);background:rgba(255,255,255,.1)">All Applications</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-content">
+    <div class="container">
+      <div class="admin-stats-row" id="adminStatsRow">
+        <div class="admin-stat"><div class="admin-stat-num" id="aStatTotal">0</div><div class="admin-stat-label">Total Applications</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" style="color:var(--warning)" id="aStatPending">0</div><div class="admin-stat-label">Pending Review</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" style="color:var(--success)" id="aStatApproved">0</div><div class="admin-stat-label">Approved</div></div>
+        <div class="admin-stat"><div class="admin-stat-num" style="color:var(--danger)" id="aStatRejected">0</div><div class="admin-stat-label">Rejected</div></div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3>Applications</h3>
+          <span style="font-size:.82rem;color:var(--gray)" id="adminAppCount">0 applications</span>
+        </div>
+        <div class="dash-card-body" style="padding:16px 0 0">
+          <div style="padding:0 16px 16px;display:flex;gap:10px;flex-wrap:wrap;">
+            <input type="text" class="search-bar" placeholder="Search by name, email, program..." oninput="filterAdminApps(this.value)" style="max-width:300px"/>
+            <button class="filter-btn active" onclick="filterByStatus('all',this)">All</button>
+            <button class="filter-btn" onclick="filterByStatus('pending',this)">Pending</button>
+            <button class="filter-btn" onclick="filterByStatus('approved',this)">Approved</button>
+            <button class="filter-btn" onclick="filterByStatus('rejected',this)">Rejected</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Applicant</th><th>Program</th><th>Degree</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="adminAppsTable"><tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray)">Loading applications...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH MODAL ══ -->
+<div class="modal-overlay" id="authModalOverlay" onclick="handleAuthOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
+      <h2 id="authModalTitle">Welcome Back</h2>
+      <p id="authModalSubtitle">Sign in to your BrightFuture account</p>
+    </div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Login</div>
+      <div class="auth-tab" id="signupTab" onclick="switchAuthTab('signup')">Sign Up</div>
+    </div>
+    <div class="modal-body">
+      <!-- Login Form -->
+      <div class="auth-form active" id="loginForm">
+        <button class="google-btn" onclick="signInWithGoogle()">
+          <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div class="divider">or sign in with email</div>
+        <div class="form-group"><label>Email Address</label><input type="email" class="form-input" id="loginEmail" placeholder="your@email.com"/></div>
+        <div class="form-group"><label>Password</label><input type="password" class="form-input" id="loginPassword" placeholder="Your password"/></div>
+        <button class="auth-submit" onclick="signInWithEmail()" id="loginBtn">Sign In</button>
+      </div>
+      <!-- Signup Form -->
+      <div class="auth-form" id="signupForm">
+        <button class="google-btn" onclick="signInWithGoogle()">
+          <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign Up with Google
+        </button>
+        <div class="divider">or create account with email</div>
+        <div class="avatar-upload-wrap">
+          <div class="avatar-preview" id="signupAvatarPreview">?</div>
+          <div class="avatar-upload-btn">
+            <label>📷 Upload Profile Photo (optional)<input type="file" accept="image/*" id="signupAvatarFile" onchange="previewSignupAvatar(this)"/></label>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group"><label>First Name *</label><input type="text" class="form-input" id="signupFirstName" placeholder="First name"/></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" class="form-input" id="signupLastName" placeholder="Last name"/></div>
+        </div>
+        <div class="form-group"><label>Email Address *</label><input type="email" class="form-input" id="signupEmail" placeholder="your@email.com"/></div>
+        <div class="form-group"><label>Password *</label><input type="password" class="form-input" id="signupPassword" placeholder="Minimum 6 characters"/></div>
+        <button class="auth-submit" onclick="signUpWithEmail()" id="signupBtn">Create Account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APPLICATION FORM MODAL ══ -->
+<div class="modal-overlay" id="appModalOverlay" onclick="handleAppOverlayClick(event)">
+  <div class="modal app-modal">
+    <div class="modal-header">
+      <button class="modal-close-btn" onclick="closeAppModal()">✕</button>
+      <h2>Apply to BrightFuture University</h2>
+      <p>Complete all steps to submit your application</p>
+      <div class="progress-bar-wrap" id="appProgressBar">
+        <div class="progress-step active" data-step="1"><div class="ps-circle">1</div><div class="ps-label">Personal</div></div>
+        <div class="progress-step" data-step="2"><div class="ps-circle">2</div><div class="ps-label">Program</div></div>
+        <div class="progress-step" data-step="3"><div class="ps-circle">3</div><div class="ps-label">Documents</div></div>
+        <div class="progress-step" data-step="4"><div class="ps-circle">4</div><div class="ps-label">Review</div></div>
+        <div class="progress-step" data-step="5"><div class="ps-circle">5</div><div class="ps-label">Payment</div></div>
+        <div class="progress-step" data-step="6"><div class="ps-circle">✓</div><div class="ps-label">Done</div></div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1 -->
+      <div class="form-step active" id="appStep1">
+        <h3>👤 Personal Information</h3>
+        <div class="form-grid-2">
+          <div class="form-group"><label>First Name *</label><input type="text" class="form-input" id="appFirstName" placeholder="First name"/></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" class="form-input" id="appLastName" placeholder="Last name"/></div>
+          <div class="form-group"><label>Email *</label><input type="email" class="form-input" id="appEmail" placeholder="your@email.com"/></div>
+          <div class="form-group"><label>Phone *</label><input type="tel" class="form-input" id="appPhone" placeholder="+234 xxx xxx xxxx"/></div>
+          <div class="form-group full-col"><label>Home Address</label><input type="text" class="form-input" id="appAddress" placeholder="Street address, City, State"/></div>
+          <div class="form-group"><label>Date of Birth</label><input type="date" class="form-input" id="appDob"/></div>
+          <div class="form-group"><label>Nationality</label><select class="form-input" id="appNationality"><option value="">Select</option><option>Nigerian</option><option>Ghanaian</option><option>Kenyan</option><option>South African</option><option>Other</option></select></div>
+        </div>
+        <div class="form-actions"><div></div><button class="btn-next" onclick="appNextStep(1)">Next →</button></div>
+      </div>
+      <!-- Step 2 -->
+      <div class="form-step" id="appStep2">
+        <h3>🎓 Program Selection</h3>
+        <div class="form-group"><label>Degree Level *</label><select class="form-input" id="appDegree"><option value="">Select degree</option><option>Bachelor's Degree (B.Sc)</option><option>Master's Degree (M.Sc)</option><option>PhD</option><option>Professional Certificate</option></select></div>
+        <div class="form-group"><label>Program / Major *</label><select class="form-input" id="appProgram"><option value="">Select program</option><option>Computer Science</option><option>Business Administration</option><option>Engineering (Electrical)</option><option>Engineering (Mechanical)</option><option>Arts & Design</option><option>Medicine & Surgery</option><option>Law</option><option>Economics</option></select></div>
+        <div class="form-group"><label>Specialization</label><select class="form-input" id="appSpec"><option value="">Select (optional)</option><option>Artificial Intelligence</option><option>Cybersecurity</option><option>Data Science</option><option>Finance & Accounting</option><option>Digital Marketing</option><option>Graphic Design</option></select></div>
+        <div class="form-group"><label>Entry Year</label><select class="form-input" id="appYear"><option>2026/2027 Academic Year</option><option>2027/2028 Academic Year</option></select></div>
+        <div class="form-group"><label>Application Type</label><select class="form-input" id="appType"><option>Admission</option><option>Scholarship</option><option>Both (Admission + Scholarship)</option></select></div>
+        <div class="form-actions"><button class="btn-back" onclick="appPrevStep(2)">← Back</button><button class="btn-next" onclick="appNextStep(2)">Next →</button></div>
+      </div>
+      <!-- Step 3 -->
+      <div class="form-step" id="appStep3">
+        <h3>📎 Upload Documents</h3>
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div>
+            <label style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--navy);display:block;margin-bottom:7px">Government ID *</label>
+            <div class="upload-area" id="idArea"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleDocUpload(this,'idArea','idLabel','idFile')"/><div class="upload-icon">🪪</div><p id="idLabel">Drag & drop or <strong>browse files</strong><br/><span style="font-size:.76rem;opacity:.6">PDF, JPG, PNG — Max 5MB</span></p></div>
+          </div>
+          <div>
+            <label style="font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--navy);display:block;margin-bottom:7px">Academic Transcripts *</label>
+            <div class="upload-area" id="transcriptArea"><input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleDocUpload(this,'transcriptArea','transcriptLabel','transcriptFile')"/><div class="upload-icon">📋</div><p id="transcriptLabel">Drag & drop or <strong>browse files</strong><br/><span style="font-size:.76rem;opacity:.6">PDF, JPG, PNG — Max 5MB</span></p></div>
+          </div>
+          <div class="form-group"><label>Personal Statement (Optional)</label><textarea class="form-input" id="appStatement" rows="4" style="resize:vertical" placeholder="Tell us about yourself and your goals..."></textarea></div>
+        </div>
+        <div class="form-actions"><button class="btn-back" onclick="appPrevStep(3)">← Back</button><button class="btn-next" onclick="appNextStep(3)">Next →</button></div>
+      </div>
+      <!-- Step 4 Review -->
+      <div class="form-step" id="appStep4">
+        <h3>🔍 Review Application</h3>
+        <div class="review-box"><div class="review-box-title">Personal Information</div><div class="review-row"><strong>Full Name</strong><span id="rv-name">—</span></div><div class="review-row"><strong>Email</strong><span id="rv-email">—</span></div><div class="review-row"><strong>Phone</strong><span id="rv-phone">—</span></div><div class="review-row"><strong>Nationality</strong><span id="rv-nationality">—</span></div></div>
+        <div class="review-box"><div class="review-box-title">Program</div><div class="review-row"><strong>Degree</strong><span id="rv-degree">—</span></div><div class="review-row"><strong>Program</strong><span id="rv-program">—</span></div><div class="review-row"><strong>Type</strong><span id="rv-type">—</span></div><div class="review-row"><strong>Entry Year</strong><span id="rv-year">—</span></div></div>
+        <div class="review-box"><div class="review-box-title">Documents</div><div class="review-row"><strong>Government ID</strong><span id="rv-id">Not uploaded</span></div><div class="review-row"><strong>Transcripts</strong><span id="rv-transcript">Not uploaded</span></div></div>
+        <div class="form-actions"><button class="btn-back" onclick="appPrevStep(4)">← Back</button><button class="btn-next" onclick="appNextStep(4)">Next →</button></div>
+      </div>
+      <!-- Step 5 Payment -->
+      <div class="form-step" id="appStep5">
+        <h3>💳 Application Fee</h3>
+        <div class="payment-placeholder">
+          <h4>Application Processing Fee</h4>
+          <div class="pay-amount">₦50,000</div>
+          <p style="font-size:.78rem;opacity:.55;margin-top:6px">Paste your payment gateway URL or API key below when available</p>
+          <input class="pay-url-input" placeholder="Payment gateway URL / API key (optional)" id="paymentUrl"/>
+        </div>
+        <p style="font-size:.82rem;color:var(--gray);margin-bottom:20px;line-height:1.6">⚠️ Payment integration coming soon. You can submit your application and complete payment when the gateway is activated.</p>
+        <div class="form-actions"><button class="btn-back" onclick="appPrevStep(5)">← Back</button><button class="btn-next" onclick="submitApplication()" id="submitBtn">Submit Application →</button></div>
+      </div>
+      <!-- Step 6 Success -->
+      <div class="form-step" id="appStep6">
+        <div class="success-wrap">
+          <div class="check-anim">✅</div>
+          <h3>Application Submitted!</h3>
+          <p style="color:var(--gray);margin-bottom:24px;line-height:1.6">Your application has been received and is under review. You'll receive an email confirmation shortly.</p>
+          <div class="review-box" style="text-align:left">
+            <div class="review-row"><strong>Application ID</strong><span style="color:var(--blue);font-weight:700" id="newAppId">—</span></div>
+            <div class="review-row"><strong>Status</strong><span class="badge badge-pending">⏳ Under Review</span></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+            <button class="btn-next" onclick="closeAppModal();showDashboard()">Go to Dashboard →</button>
+            <button class="btn-back" onclick="closeAppModal()">Back to Home</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN APPLICATION DETAIL MODAL ══ -->
+<div class="modal-overlay" id="detailModalOverlay" onclick="handleDetailOverlayClick(event)">
+  <div class="modal detail-modal" style="max-height:92vh">
+    <div class="modal-header">
+      <button class="modal-close-btn" onclick="closeDetailModal()">✕</button>
+      <h2>Application Review</h2>
+      <p id="detailAppId">Application ID: —</p>
+    </div>
+    <div class="modal-body" id="detailModalBody">
+      <!-- Filled dynamically -->
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://turwkpxlztzgfqssyoed.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1cndrcHhsenR6Z2Zxc3N5b2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTg4MjYsImV4cCI6MjA5MDE5NDgyNn0.kaz8ltNx8Am-8ieK5OXsPEVOJOqTiJcCAsl4LmAFj5c';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+let currentUserProfile = null;
+let allAdminApps = [];
+let adminFilterStatus = 'all';
+let appFormData = { idFile: null, transcriptFile: null };
+let currentAppStep = 1;
+
+// ── TOAST ──
+function toast(msg, type='info'){
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(()=>el.remove(), 4000);
+}
+
+// ── SCROLL REVEAL ──
+const revealObs = new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:.1,rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>revealObs.observe(el));
+
+// ── NAVBAR SCROLL ──
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>30));
+document.getElementById('navbar').classList.add('scrolled');
+
+// ── MOBILE MENU ──
+function toggleMobileMenu(){document.getElementById('mobileMenu').classList.toggle('open');}
+function closeMobileMenu(){document.getElementById('mobileMenu').classList.remove('open');}
+
+// ══════════════════════════════════════════════════════════
+// VIEWS
+// ══════════════════════════════════════════════════════════
+function showLanding(){
+  document.getElementById('landing-view').style.display='block';
+  document.getElementById('dashboard-view').style.display='none';
+  document.getElementById('admin-view').style.display='none';
+  window.scrollTo({top:0});
+}
+function showDashboard(){
+  document.getElementById('landing-view').style.display='none';
+  document.getElementById('dashboard-view').style.display='block';
+  document.getElementById('admin-view').style.display='none';
+  window.scrollTo({top:0});
+  loadUserDashboard();
+}
+function showAdmin(){
+  document.getElementById('landing-view').style.display='none';
+  document.getElementById('dashboard-view').style.display='none';
+  document.getElementById('admin-view').style.display='block';
+  window.scrollTo({top:0});
+  loadAdminPanel();
+}
+
+// ══════════════════════════════════════════════════════════
+// AUTH MODAL
+// ══════════════════════════════════════════════════════════
+function openAuthModal(tab='login'){
+  switchAuthTab(tab);
+  document.getElementById('authModalOverlay').classList.add('open');
+}
+function closeAuthModal(){document.getElementById('authModalOverlay').classList.remove('open');}
+function handleAuthOverlayClick(e){if(e.target.id==='authModalOverlay')closeAuthModal();}
+function switchAuthTab(tab){
+  document.getElementById('loginTab').classList.toggle('active',tab==='login');
+  document.getElementById('signupTab').classList.toggle('active',tab==='signup');
+  document.getElementById('loginForm').classList.toggle('active',tab==='login');
+  document.getElementById('signupForm').classList.toggle('active',tab==='signup');
+  document.getElementById('authModalTitle').textContent = tab==='login'?'Welcome Back':'Create Account';
+  document.getElementById('authModalSubtitle').textContent = tab==='login'?'Sign in to your BrightFuture account':'Join thousands of students at BrightFuture';
+}
+
+// ── EMAIL LOGIN ──
+async function signInWithEmail(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  if(!email||!pass){toast('Please fill all fields','error');return;}
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<span class="spinner"></span> Signing in...';
+  btn.disabled = true;
+  try {
+    const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+    if(error) throw error;
+    closeAuthModal();
+    toast('Welcome back! 🎉','success');
+  } catch(e){
+    toast(e.message||'Login failed','error');
+  } finally { btn.innerHTML='Sign In'; btn.disabled=false; }
+}
+
+// ── EMAIL SIGNUP ──
+async function signUpWithEmail(){
+  const fn = document.getElementById('signupFirstName').value.trim();
+  const ln = document.getElementById('signupLastName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pass = document.getElementById('signupPassword').value;
+  if(!fn||!ln||!email||!pass){toast('Please fill all required fields','error');return;}
+  if(pass.length<6){toast('Password must be at least 6 characters','error');return;}
+  const btn = document.getElementById('signupBtn');
+  btn.innerHTML = '<span class="spinner"></span> Creating account...';
+  btn.disabled = true;
+  try {
+    const {data,error} = await sb.auth.signUp({email,password:pass,options:{data:{full_name:`${fn} ${ln}`,avatar_url:''}}});
+    if(error) throw error;
+    // Upload avatar if provided
+    const avatarFile = document.getElementById('signupAvatarFile').files[0];
+    let avatarUrl = '';
+    if(avatarFile && data.user){
+      avatarUrl = await uploadAvatarFile(avatarFile, data.user.id);
+    }
+    // Create profile
+    if(data.user){
+      await sb.from('profiles').upsert({
+        id: data.user.id,
+        full_name: `${fn} ${ln}`,
+        email,
+        role: 'user',
+        avatar_url: avatarUrl,
+        created_at: new Date().toISOString()
+      });
+    }
+    closeAuthModal();
+    toast('Account created! Check your email to verify.','success');
+  } catch(e){
+    toast(e.message||'Signup failed','error');
+  } finally { btn.innerHTML='Create Account'; btn.disabled=false; }
+}
+
+// ── GOOGLE AUTH ──
+async function signInWithGoogle(){
+  try {
+    const {error} = await sb.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo: window.location.href}
+    });
+    if(error) throw error;
+  } catch(e){
+    toast(e.message||'Google sign-in failed','error');
+  }
+}
+
+// ── SIGN OUT ──
+async function signOut(){
+  await sb.auth.signOut();
+  currentUser = null;
+  currentUserProfile = null;
+  updateNavForAuth(null);
+  showLanding();
+  toast('Signed out successfully','info');
+}
+
+// ── AUTH STATE ──
+sb.auth.onAuthStateChange(async (event, session) => {
+  if(session?.user){
+    currentUser = session.user;
+    await loadUserProfile(session.user.id);
+    updateNavForAuth(session.user);
+  } else {
+    currentUser = null;
+    currentUserProfile = null;
+    updateNavForAuth(null);
+  }
+});
+
+async function loadUserProfile(uid){
+  const {data} = await sb.from('profiles').select('*').eq('id',uid).single();
+  currentUserProfile = data;
+  return data;
+}
+
+// ── UPDATE NAV ──
+function updateNavForAuth(user){
+  const actions = document.getElementById('navActions');
+  if(!user){
+    actions.innerHTML = `
+      <button class="btn-nav-login" onclick="openAuthModal('login')">Login</button>
+      <button class="btn-nav-apply" onclick="openAuthModal('signup')">Apply Now</button>`;
+    return;
+  }
+  const name = currentUserProfile?.full_name || user.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  const avatarUrl = currentUserProfile?.avatar_url || user.user_metadata?.avatar_url || '';
+  const isAdmin = currentUserProfile?.role === 'admin';
+  actions.innerHTML = `
+    <div class="nav-profile-wrap">
+      <button class="profile-btn" onclick="toggleProfileDropdown()">
+        <div class="profile-avatar">${avatarUrl?`<img src="${avatarUrl}" alt="Avatar"/>`:`<span>${initials}</span>`}</div>
+        Hi, ${name.split(' ')[0]}
+      </button>
+      <div class="profile-dropdown" id="profileDropdown">
+        <div class="dropdown-header">
+          <div class="dropdown-name">${name}</div>
+          <div class="dropdown-email">${user.email}</div>
+        </div>
+        ${isAdmin?`<div class="dropdown-item" onclick="showAdmin();closeProfileDropdown()">🛠️ Admin Panel</div><div class="dropdown-divider"></div>`:''}
+        <div class="dropdown-item" onclick="showDashboard();closeProfileDropdown()">📋 Dashboard</div>
+        <div class="dropdown-item" onclick="showDashboard();switchDashTab('applications',null);closeProfileDropdown()">📄 My Applications</div>
+        <div class="dropdown-item" onclick="showDashboard();switchDashTab('profile',null);closeProfileDropdown()">👤 Profile Settings</div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item danger" onclick="signOut()">🚪 Logout</div>
+      </div>
+    </div>`;
+}
+
+function toggleProfileDropdown(){
+  document.getElementById('profileDropdown')?.classList.toggle('open');
+}
+function closeProfileDropdown(){
+  document.getElementById('profileDropdown')?.classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.nav-profile-wrap'))closeProfileDropdown();
+  if(!e.target.closest('.notif-btn-wrap'))document.getElementById('notifPanel')?.classList.remove('open');
+});
+
+// ── HANDLE APPLY CLICK ──
+function handleApplyClick(){
+  if(!currentUser){ openAuthModal('login'); toast('Please log in to apply','warning'); }
+  else openAppModal();
+}
+
+// ══════════════════════════════════════════════════════════
+// AVATAR UPLOAD
+// ══════════════════════════════════════════════════════════
+async function uploadAvatarFile(file, uid){
+  const ext = file.name.split('.').pop();
+  const path = `avatars/${uid}.${ext}`;
+  const {error} = await sb.storage.from('uploads').upload(path, file, {upsert:true});
+  if(error) return '';
+  const {data} = sb.storage.from('uploads').getPublicUrl(path);
+  return data.publicUrl || '';
+}
+
+function previewSignupAvatar(input){
+  if(input.files && input.files[0]){
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('signupAvatarPreview');
+      prev.innerHTML = `<img src="${e.target.result}" alt="Preview"/>`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+async function uploadProfilePicture(input){
+  if(!input.files||!input.files[0]||!currentUser) return;
+  const file = input.files[0];
+  toast('Uploading photo...','info');
+  const url = await uploadAvatarFile(file, currentUser.id);
+  if(!url){toast('Upload failed. Check storage bucket settings.','error');return;}
+  await sb.from('profiles').update({avatar_url:url}).eq('id',currentUser.id);
+  currentUserProfile = {...currentUserProfile, avatar_url:url};
+  // Update UI
+  const bigAvatar = document.getElementById('profileBigAvatar');
+  if(bigAvatar) bigAvatar.innerHTML = `<img src="${url}" alt="Avatar"/>`;
+  updateNavForAuth(currentUser);
+  toast('Profile photo updated!','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+async function loadUserDashboard(){
+  if(!currentUser) return;
+  // Welcome
+  const name = currentUserProfile?.full_name || 'there';
+  document.getElementById('dashWelcome').textContent = `Welcome back, ${name.split(' ')[0]}! 👋`;
+  // Load profile
+  document.getElementById('profileName').value = currentUserProfile?.full_name||'';
+  document.getElementById('profileEmail').value = currentUser.email||'';
+  document.getElementById('profilePhone').value = currentUserProfile?.phone||'';
+  document.getElementById('profileAddress').value = currentUserProfile?.address||'';
+  document.getElementById('profileBigName').textContent = currentUserProfile?.full_name||'—';
+  document.getElementById('profileBigEmail').textContent = currentUser.email||'—';
+  const bigAvatar = document.getElementById('profileBigAvatar');
+  const initials = (currentUserProfile?.full_name||'U').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  const avatarUrl = currentUserProfile?.avatar_url||'';
+  bigAvatar.innerHTML = avatarUrl ? `<img src="${avatarUrl}" alt="Avatar"/>` : initials;
+  // Load applications
+  await loadUserApplications();
+  await loadUserNotifications();
+}
+
+async function loadUserApplications(){
+  const {data, error} = await sb.from('applications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  if(error){toast('Error loading applications','error');return;}
+  // Stats
+  document.getElementById('statTotal').textContent = data.length;
+  document.getElementById('statPending').textContent = data.filter(a=>a.status==='pending'||a.status==='review').length;
+  document.getElementById('statApproved').textContent = data.filter(a=>a.status==='approved').length;
+  // Render
+  const container = document.getElementById('applicationsListUser');
+  if(!data.length){
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📂</div><p>No applications yet.<br/>Click "New Application" to get started.</p></div>`;
+    return;
+  }
+  container.innerHTML = data.map(app => {
+    const statusBadge = {pending:`<span class="badge badge-pending">⏳ Under Review</span>`,approved:`<span class="badge badge-approved">✅ Approved</span>`,rejected:`<span class="badge badge-rejected">❌ Rejected</span>`,review:`<span class="badge badge-review">🔍 Being Reviewed</span>`}[app.status]||`<span class="badge badge-pending">Pending</span>`;
+    const certBtn = app.status==='approved' && app.result_file_url ? `<a href="${app.result_file_url}" target="_blank" class="download-cert-btn">📥 Download Certificate</a>` : '';
+    const date = new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const icons = {'Computer Science':'💻','Business Administration':'📊','Engineering (Electrical)':'⚡','Engineering (Mechanical)':'⚙️','Arts & Design':'🎨','Medicine & Surgery':'🩺','Law':'⚖️','Economics':'📈'};
+    const icon = icons[app.form_data?.program]||'🎓';
+    return `<div class="application-item">
+      <div class="app-item-left">
+        <div class="app-item-icon">${icon}</div>
+        <div>
+          <div class="app-item-title">${app.form_data?.program||'Unknown Program'}</div>
+          <div class="app-item-sub">${app.form_data?.degree||''} • ${app.form_data?.type||'Admission'} • ${date}</div>
+          ${app.admin_feedback?`<div style="font-size:.78rem;color:var(--danger);margin-top:4px">📝 ${app.admin_feedback}</div>`:''}
+        </div>
+      </div>
+      <div class="app-item-actions">
+        ${statusBadge}
+        ${certBtn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadUserNotifications(){
+  const {data} = await sb.from('notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  const container = document.getElementById('notificationsListUser');
+  if(!data||!data.length){container.innerHTML=`<div class="empty-state"><div class="empty-state-icon">🔔</div><p>No notifications yet.</p></div>`;return;}
+  container.innerHTML = data.map(n=>`<div class="application-item"><div style="flex:1"><div style="font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem;margin-bottom:4px">${n.title}</div><div style="font-size:.84rem;color:var(--gray)">${n.message}</div><div style="font-size:.76rem;color:var(--gray);margin-top:4px">${new Date(n.created_at).toLocaleDateString()}</div></div></div>`).join('');
+}
+
+function switchDashTab(tab, btn){
+  ['applications','profile','notifications'].forEach(t=>{
+    document.getElementById(`dashTab${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display = t===tab?'block':'none';
+  });
+  if(btn){document.querySelectorAll('#dashboard-view .filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+}
+
+async function saveProfile(){
+  if(!currentUser) return;
+  const name = document.getElementById('profileName').value.trim();
+  const phone = document.getElementById('profilePhone').value.trim();
+  const address = document.getElementById('profileAddress').value.trim();
+  const {error} = await sb.from('profiles').update({full_name:name,phone,address}).eq('id',currentUser.id);
+  if(error){toast('Error saving profile','error');return;}
+  currentUserProfile = {...currentUserProfile, full_name:name, phone, address};
+  document.getElementById('profileBigName').textContent = name;
+  updateNavForAuth(currentUser);
+  toast('Profile saved!','success');
+}
+
+// ══════════════════════════════════════════════════════════
+// APPLICATION FORM MODAL
+// ══════════════════════════════════════════════════════════
+function openAppModal(){
+  currentAppStep = 1;
+  setAppStep(1);
+  appFormData = {idFile:null,transcriptFile:null};
+  // Pre-fill from profile
+  if(currentUserProfile){
+    const names = (currentUserProfile.full_name||'').split(' ');
+    document.getElementById('appFirstName').value = names[0]||'';
+    document.getElementById('appLastName').value = names.slice(1).join(' ')||'';
+    document.getElementById('appEmail').value = currentUser?.email||'';
+    document.getElementById('appPhone').value = currentUserProfile.phone||'';
+    document.getElementById('appAddress').value = currentUserProfile.address||'';
+  }
+  document.getElementById('appModalOverlay').classList.add('open');
+}
+function closeAppModal(){document.getElementById('appModalOverlay').classList.remove('open');}
+function handleAppOverlayClick(e){if(e.target.id==='appModalOverlay')closeAppModal();}
+
+function setAppStep(n){
+  currentAppStep = n;
+  document.querySelectorAll('.form-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('appStep'+n).classList.add('active');
+  document.querySelectorAll('#appProgressBar .progress-step').forEach(s=>{
+    const sn = parseInt(s.dataset.step);
+    s.classList.remove('active','done');
+    if(sn===n) s.classList.add('active');
+    else if(sn<n) s.classList.add('done');
+  });
+  document.getElementById('appModalOverlay').querySelector('.modal').scrollTo({top:0,behavior:'smooth'});
+}
+
+function appNextStep(step){
+  if(step===1){
+    if(!document.getElementById('appFirstName').value.trim()){shakeEl('appFirstName');return;}
+    if(!document.getElementById('appEmail').value.trim()){shakeEl('appEmail');return;}
+    if(!document.getElementById('appPhone').value.trim()){shakeEl('appPhone');return;}
+  }
+  if(step===2){
+    if(!document.getElementById('appDegree').value){shakeEl('appDegree');return;}
+    if(!document.getElementById('appProgram').value){shakeEl('appProgram');return;}
+  }
+  if(step===4) populateReview();
+  setAppStep(step+1);
+}
+function appPrevStep(step){setAppStep(step-1);}
+
+function shakeEl(id){
+  const el=document.getElementById(id);
+  el.classList.add('error');
+  el.focus();
+  setTimeout(()=>el.classList.remove('error'),600);
+}
+
+function handleDocUpload(input,areaId,labelId,fileKey){
+  if(input.files&&input.files[0]){
+    const f=input.files[0];
+    appFormData[fileKey]=f;
+    document.getElementById(labelId).innerHTML=`✅ <strong>${f.name}</strong> uploaded`;
+    document.getElementById(areaId).style.borderColor='#34d399';
+    document.getElementById(areaId).style.background='#f0fff4';
+  }
+}
+
+function populateReview(){
+  const fn = document.getElementById('appFirstName').value;
+  const ln = document.getElementById('appLastName').value;
+  document.getElementById('rv-name').textContent = [fn,ln].filter(Boolean).join(' ')||'—';
+  document.getElementById('rv-email').textContent = document.getElementById('appEmail').value||'—';
+  document.getElementById('rv-phone').textContent = document.getElementById('appPhone').value||'—';
+  document.getElementById('rv-nationality').textContent = document.getElementById('appNationality').value||'—';
+  document.getElementById('rv-degree').textContent = document.getElementById('appDegree').value||'—';
+  document.getElementById('rv-program').textContent = document.getElementById('appProgram').value||'—';
+  document.getElementById('rv-type').textContent = document.getElementById('appType').value||'—';
+  document.getElementById('rv-year').textContent = document.getElementById('appYear').value||'—';
+  document.getElementById('rv-id').textContent = appFormData.idFile?appFormData.idFile.name:'Not uploaded';
+  document.getElementById('rv-transcript').textContent = appFormData.transcriptFile?appFormData.transcriptFile.name:'Not uploaded';
+}
+
+async function submitApplication(){
+  if(!currentUser){toast('Please log in first','error');return;}
+  const btn = document.getElementById('submitBtn');
+  btn.innerHTML = '<span class="spinner"></span> Submitting...';
+  btn.disabled = true;
+  try {
+    // Upload documents
+    let idUrl='', transcriptUrl='';
+    const uid = currentUser.id;
+    if(appFormData.idFile){
+      const path=`applications/${uid}/${Date.now()}_id_${appFormData.idFile.name}`;
+      const {error:ue} = await sb.storage.from('uploads').upload(path,appFormData.idFile,{upsert:true});
+      if(!ue){const {data:ud}=sb.storage.from('uploads').getPublicUrl(path);idUrl=ud.publicUrl||'';}
+    }
+    if(appFormData.transcriptFile){
+      const path=`applications/${uid}/${Date.now()}_tr_${appFormData.transcriptFile.name}`;
+      const {error:ue}=await sb.storage.from('uploads').upload(path,appFormData.transcriptFile,{upsert:true});
+      if(!ue){const {data:ud}=sb.storage.from('uploads').getPublicUrl(path);transcriptUrl=ud.publicUrl||'';}
+    }
+    // Build form data
+    const formData = {
+      first_name: document.getElementById('appFirstName').value,
+      last_name: document.getElementById('appLastName').value,
+      full_name: `${document.getElementById('appFirstName').value} ${document.getElementById('appLastName').value}`,
+      email: document.getElementById('appEmail').value,
+      phone: document.getElementById('appPhone').value,
+      address: document.getElementById('appAddress').value,
+      dob: document.getElementById('appDob').value,
+      nationality: document.getElementById('appNationality').value,
+      degree: document.getElementById('appDegree').value,
+      program: document.getElementById('appProgram').value,
+      specialization: document.getElementById('appSpec').value,
+      entry_year: document.getElementById('appYear').value,
+      type: document.getElementById('appType').value,
+      statement: document.getElementById('appStatement').value,
+    };
+    const {data, error} = await sb.from('applications').insert({
+      user_id: uid,
+      status: 'pending',
+      form_data: formData,
+      documents: {id_url:idUrl, transcript_url:transcriptUrl},
+      result_file_url: null,
+      admin_feedback: '',
+      created_at: new Date().toISOString()
+    }).select().single();
+    if(error) throw error;
+    const appId = data.id.substring(0,8).toUpperCase();
+    document.getElementById('newAppId').textContent = `BFU-${appId}`;
+    setAppStep(6);
+  } catch(e){
+    toast(e.message||'Submission failed. Please try again.','error');
+  } finally { btn.innerHTML='Submit Application →'; btn.disabled=false; }
+}
+
+// ══════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════════
+async function loadAdminPanel(){
+  const {data, error} = await sb.from('applications').select('*, profiles(full_name, email, avatar_url)').order('created_at',{ascending:false});
+  if(error){toast('Error loading applications','error');return;}
+  allAdminApps = data||[];
+  updateAdminStats();
+  renderAdminTable(allAdminApps);
+}
+
+function updateAdminStats(){
+  document.getElementById('aStatTotal').textContent = allAdminApps.length;
+  document.getElementById('aStatPending').textContent = allAdminApps.filter(a=>a.status==='pending').length;
+  document.getElementById('aStatApproved').textContent = allAdminApps.filter(a=>a.status==='approved').length;
+  document.getElementById('aStatRejected').textContent = allAdminApps.filter(a=>a.status==='rejected').length;
+  document.getElementById('adminAppCount').textContent = `${allAdminApps.length} applications`;
+}
+
+function renderAdminTable(apps){
+  const tbody = document.getElementById('adminAppsTable');
+  if(!apps.length){tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray)">No applications found</td></tr>`;return;}
+  const statusBadge = s => ({pending:`<span class="badge badge-pending">⏳ Pending</span>`,approved:`<span class="badge badge-approved">✅ Approved</span>`,rejected:`<span class="badge badge-rejected">❌ Rejected</span>`,review:`<span class="badge badge-review">🔍 In Review</span>`}[s]||`<span class="badge badge-pending">${s}</span>`);
+  tbody.innerHTML = apps.map(app=>{
+    const name = app.profiles?.full_name || app.form_data?.full_name || 'Unknown';
+    const email = app.profiles?.email || app.form_data?.email || '—';
+    const date = new Date(app.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    return `<tr>
+      <td><div style="font-weight:600">${name}</div><div style="font-size:.78rem;color:var(--gray)">${email}</div></td>
+      <td>${app.form_data?.program||'—'}</td>
+      <td style="font-size:.82rem">${app.form_data?.degree||'—'}</td>
+      <td style="font-size:.82rem;color:var(--gray)">${date}</td>
+      <td>${statusBadge(app.status)}</td>
+      <td><button class="btn btn-ghost" onclick="openDetailModal('${app.id}')" style="padding:7px 16px;font-size:.8rem">Review →</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterByStatus(status, btn){
+  adminFilterStatus = status;
+  document.querySelectorAll('#admin-view .filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const filtered = status==='all' ? allAdminApps : allAdminApps.filter(a=>a.status===status);
+  renderAdminTable(filtered);
+}
+
+function filterAdminApps(query){
+  const q = query.toLowerCase();
+  const filtered = allAdminApps.filter(a=>{
+    const name = (a.profiles?.full_name||a.form_data?.full_name||'').toLowerCase();
+    const email = (a.profiles?.email||a.form_data?.email||'').toLowerCase();
+    const program = (a.form_data?.program||'').toLowerCase();
+    return name.includes(q)||email.includes(q)||program.includes(q);
+  });
+  if(adminFilterStatus!=='all') renderAdminTable(filtered.filter(a=>a.status===adminFilterStatus));
+  else renderAdminTable(filtered);
+}
+
+// ══════════════════════════════════════════════════════════
+// DETAIL MODAL
+// ══════════════════════════════════════════════════════════
+let currentDetailApp = null;
+
+async function openDetailModal(appId){
+  const app = allAdminApps.find(a=>a.id===appId);
+  if(!app) return;
+  currentDetailApp = app;
+  const d = app.form_data||{};
+  const docs = app.documents||{};
+  document.getElementById('detailAppId').textContent = `Application ID: BFU-${appId.substring(0,8).toUpperCase()}`;
+  const statusColor = {pending:'var(--warning)',approved:'var(--success)',rejected:'var(--danger)',review:'var(--blue)'}[app.status]||'var(--gray)';
+  document.getElementById('detailModalBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Current Status</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <span class="badge badge-${app.status}" style="font-size:.88rem;padding:8px 18px">${{pending:'⏳ Pending Review',approved:'✅ Approved',rejected:'❌ Rejected',review:'🔍 In Review'}[app.status]||app.status}</span>
+        ${app.reviewed_at?`<span style="font-size:.8rem;color:var(--gray)">Reviewed: ${new Date(app.reviewed_at).toLocaleDateString()}</span>`:''}
+      </div>
+      ${app.admin_feedback?`<div style="background:#fef2f2;border-radius:10px;padding:12px 16px;font-size:.85rem;color:var(--danger)">📝 Feedback: ${app.admin_feedback}</div>`:''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Personal Information</div>
+      <div class="detail-grid">
+        <div class="detail-field"><label>Full Name</label><span>${d.full_name||'—'}</span></div>
+        <div class="detail-field"><label>Email</label><span>${d.email||'—'}</span></div>
+        <div class="detail-field"><label>Phone</label><span>${d.phone||'—'}</span></div>
+        <div class="detail-field"><label>Nationality</label><span>${d.nationality||'—'}</span></div>
+        <div class="detail-field"><label>Date of Birth</label><span>${d.dob||'—'}</span></div>
+        <div class="detail-field"><label>Address</label><span>${d.address||'—'}</span></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Program Details</div>
+      <div class="detail-grid">
+        <div class="detail-field"><label>Degree Level</label><span>${d.degree||'—'}</span></div>
+        <div class="detail-field"><label>Program / Major</label><span>${d.program||'—'}</span></div>
+        <div class="detail-field"><label>Specialization</label><span>${d.specialization||'—'}</span></div>
+        <div class="detail-field"><label>Application Type</label><span>${d.type||'—'}</span></div>
+        <div class="detail-field"><label>Entry Year</label><span>${d.entry_year||'—'}</span></div>
+      </div>
+      ${d.statement?`<div style="margin-top:12px"><div class="detail-field" style="grid-column:1/-1"><label>Personal Statement</label><span style="white-space:pre-wrap;line-height:1.6">${d.statement}</span></div></div>`:''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Submitted Documents</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${docs.id_url?`<a href="${docs.id_url}" target="_blank" class="btn btn-ghost" style="font-size:.82rem;padding:9px 18px">🪪 View Government ID</a>`:'<span style="color:var(--gray);font-size:.85rem">No ID uploaded</span>'}
+        ${docs.transcript_url?`<a href="${docs.transcript_url}" target="_blank" class="btn btn-ghost" style="font-size:.82rem;padding:9px 18px">📋 View Transcripts</a>`:'<span style="color:var(--gray);font-size:.85rem">No transcript uploaded</span>'}
+        ${app.result_file_url?`<a href="${app.result_file_url}" target="_blank" class="btn btn-success" style="font-size:.82rem;padding:9px 18px">📥 View Certificate</a>`:''}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Admin Actions</div>
+      <div class="form-group"><label>Admin Feedback / Notes</label><textarea class="feedback-area" id="adminFeedback" rows="3" placeholder="Add feedback or reason for decision...">${app.admin_feedback||''}</textarea></div>
+      <div class="cert-upload-area" id="certUploadArea">
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="handleCertUpload(this)"/>
+        <div style="font-size:1.6rem;margin-bottom:6px">📄</div>
+        <p style="font-size:.84rem;color:var(--gray)">Upload certificate / result file <strong>(PDF recommended)</strong></p>
+        <p id="certUploadLabel" style="font-size:.8rem;color:var(--success);margin-top:4px"></p>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-success" onclick="adminApprove('${appId}')">✅ Approve Application</button>
+        <button class="btn btn-danger" onclick="adminReject('${appId}')">❌ Reject Application</button>
+        <button class="btn btn-primary" onclick="generatePDF('${appId}')">📄 Generate PDF</button>
+      </div>
+    </div>`;
+  document.getElementById('detailModalOverlay').classList.add('open');
+}
+function closeDetailModal(){document.getElementById('detailModalOverlay').classList.remove('open');currentDetailApp=null;window._certFile=null;}
+function handleDetailOverlayClick(e){if(e.target.id==='detailModalOverlay')closeDetailModal();}
+
+let _certFile = null;
+function handleCertUpload(input){
+  if(input.files&&input.files[0]){
+    _certFile = input.files[0];
+    document.getElementById('certUploadLabel').textContent = `✅ ${_certFile.name} ready to upload`;
+    document.getElementById('certUploadArea').style.borderColor='var(--success)';
+    document.getElementById('certUploadArea').style.background='#f0fdf4';
+  }
+}
+
+async function adminApprove(appId){
+  const feedback = document.getElementById('adminFeedback')?.value||'';
+  let certUrl = currentDetailApp?.result_file_url||'';
+  // Upload cert if provided
+  if(_certFile){
+    const path = `results/${appId}_cert_${Date.now()}.${_certFile.name.split('.').pop()}`;
+    const {error:ue} = await sb.storage.from('uploads').upload(path,_certFile,{upsert:true});
+    if(!ue){const {data:ud}=sb.storage.from('uploads').getPublicUrl(path);certUrl=ud.publicUrl||'';}
+  }
+  const {error} = await sb.from('applications').update({
+    status:'approved', admin_feedback:feedback, result_file_url:certUrl,
+    reviewed_at:new Date().toISOString(), reviewed_by:currentUser?.id
+  }).eq('id',appId);
+  if(error){toast('Error updating application','error');return;}
+  // Notify user
+  const app = allAdminApps.find(a=>a.id===appId);
+  if(app?.user_id){
+    await sb.from('notifications').insert({user_id:app.user_id,title:'🎉 Application Approved!',message:`Congratulations! Your application for ${app.form_data?.program} has been approved.${certUrl?' Your certificate is ready to download.':''}`,created_at:new Date().toISOString()});
+  }
+  toast('Application approved successfully!','success');
+  closeDetailModal();
+  loadAdminPanel();
+}
+
+async function adminReject(appId){
+  const feedback = document.getElementById('adminFeedback')?.value||'No specific reason provided.';
+  const {error} = await sb.from('applications').update({
+    status:'rejected', admin_feedback:feedback,
+    reviewed_at:new Date().toISOString(), reviewed_by:currentUser?.id
+  }).eq('id',appId);
+  if(error){toast('Error updating application','error');return;}
+  const app = allAdminApps.find(a=>a.id===appId);
+  if(app?.user_id){
+    await sb.from('notifications').insert({user_id:app.user_id,title:'Application Status Update',message:`Your application for ${app.form_data?.program} has been reviewed. Reason: ${feedback}`,created_at:new Date().toISOString()});
+  }
+  toast('Application rejected.','warning');
+  closeDetailModal();
+  loadAdminPanel();
+}
+
+// ══════════════════════════════════════════════════════════
+// PDF GENERATION
+// ══════════════════════════════════════════════════════════
+async function generatePDF(appId){
+  const app = allAdminApps.find(a=>a.id===appId) || currentDetailApp;
+  if(!app){toast('Application not found','error');return;}
+  toast('Generating PDF...','info');
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const d = app.form_data||{};
+  const isApproved = app.status==='approved';
+  const isRejected = app.status==='rejected';
+  const W=210, pageH=297;
+
+  // Header bar
+  doc.setFillColor(5,18,43);
+  doc.rect(0,0,W,38,'F');
+  // Gold accent bar
+  doc.setFillColor(255,215,0);
+  doc.rect(0,38,W,3,'F');
+  // Header text
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica','bold');
+  doc.text('BrightFuture University',W/2,16,{align:'center'});
+  doc.setFontSize(9);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(180,195,230);
+  doc.text('123 University Road, Lagos, Nigeria  |  info@brightfuture.edu  |  +234 123 456 7890',W/2,24,{align:'center'});
+  doc.setTextColor(255,215,0);
+  doc.setFontSize(10);
+  doc.setFont('helvetica','bold');
+  doc.text('OFFICIAL APPLICATION DECISION DOCUMENT',W/2,32,{align:'center'});
+
+  // Status watermark
+  if(isApproved||isRejected){
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({opacity:0.07}));
+    doc.setTextColor(isApproved?0:220, isApproved?120:38, isApproved?80:38);
+    doc.setFontSize(80);
+    doc.setFont('helvetica','bold');
+    doc.text(isApproved?'APPROVED':'REJECTED',W/2,pageH/2+20,{align:'center',angle:45});
+    doc.restoreGraphicsState();
+  }
+
+  // Status banner
+  let bannerColor = isApproved?[5,150,105]:isRejected?[220,38,38]:[217,119,6];
+  doc.setFillColor(...bannerColor);
+  doc.roundedRect(14,46,W-28,18,4,4,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(12);
+  doc.setFont('helvetica','bold');
+  const statusText = isApproved?'✓  APPLICATION APPROVED':isRejected?'✗  APPLICATION REJECTED':'○  APPLICATION UNDER REVIEW';
+  doc.text(statusText,W/2,57,{align:'center'});
+
+  // App ID & date
+  doc.setTextColor(100,116,139);
+  doc.setFontSize(8);
+  doc.setFont('helvetica','normal');
+  doc.text(`Application ID: BFU-${appId.substring(0,8).toUpperCase()}`,16,72);
+  doc.text(`Date: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}`,W-16,72,{align:'right'});
+  doc.text(`Generated: ${new Date().toLocaleTimeString()}`,W/2,72,{align:'center'});
+
+  let y = 82;
+
+  // Helper: section
+  function section(title){
+    doc.setFillColor(232,240,255);
+    doc.rect(14,y-5,W-28,8,'F');
+    doc.setFillColor(24,72,200);
+    doc.rect(14,y-5,3,8,'F');
+    doc.setTextColor(5,18,43);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text(title,20,y);
+    y+=10;
+  }
+  // Helper: field pair
+  function fieldRow(label1,val1,label2='',val2=''){
+    doc.setTextColor(107,122,153);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica','bold');
+    doc.text(label1.toUpperCase(),16,y);
+    if(label2) doc.text(label2.toUpperCase(),W/2+2,y);
+    y+=4;
+    doc.setTextColor(15,28,63);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text(String(val1||'—'),16,y,{maxWidth:88});
+    if(label2) doc.text(String(val2||'—'),W/2+2,y,{maxWidth:88});
+    y+=7;
+  }
+
+  // Personal Information
+  section('PERSONAL INFORMATION');
+  fieldRow('Full Name',d.full_name,'Email Address',d.email);
+  fieldRow('Phone Number',d.phone,'Date of Birth',d.dob);
+  fieldRow('Nationality',d.nationality,'Home Address',d.address);
+  y+=4;
+
+  // Program Details
+  section('PROGRAM & ACADEMIC DETAILS');
+  fieldRow('Degree Level',d.degree,'Program / Major',d.program);
+  fieldRow('Specialization',d.specialization||'N/A','Application Type',d.type);
+  fieldRow('Entry Year',d.entry_year);
+  y+=4;
+
+  // Decision
+  section('DECISION & FEEDBACK');
+  doc.setFillColor(isApproved?240:isRejected?254:255, isApproved?253:isRejected?242:251, isApproved?244:isRejected?242:235);
+  doc.roundedRect(14,y-2,W-28,28,3,3,'F');
+  doc.setDrawColor(...bannerColor);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14,y-2,W-28,28,3,3,'S');
+  doc.setTextColor(15,28,63);
+  doc.setFontSize(9);
+  doc.setFont('helvetica','bold');
+  doc.text('Decision:',18,y+5);
+  doc.setTextColor(...bannerColor);
+  doc.text(isApproved?'APPROVED ✓':isRejected?'REJECTED ✗':'UNDER REVIEW',45,y+5);
+  if(app.admin_feedback){
+    doc.setTextColor(107,122,153);
+    doc.setFontSize(8);
+    doc.setFont('helvetica','normal');
+    doc.text('Feedback:',18,y+13);
+    doc.setTextColor(15,28,63);
+    const feedbackLines = doc.splitTextToSize(app.admin_feedback,W-50);
+    doc.text(feedbackLines,45,y+13);
+  }
+  if(app.reviewed_at){
+    doc.setTextColor(107,122,153);
+    doc.setFontSize(7.5);
+    doc.text(`Review Date: ${new Date(app.reviewed_at).toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}`,18,y+22);
+  }
+  y+=34;
+
+  // Certificate link
+  if(app.result_file_url){
+    section('CERTIFICATE / RESULT FILE');
+    doc.setTextColor(24,72,200);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica','normal');
+    doc.text(`Certificate available at: ${app.result_file_url}`,16,y,{maxWidth:W-32});
+    y+=10;
+  }
+
+  // Footer
+  doc.setFillColor(5,18,43);
+  doc.rect(0,pageH-28,W,28,'F');
+  doc.setFillColor(255,215,0);
+  doc.rect(0,pageH-28,W,1.5,'F');
+  doc.setTextColor(180,195,230);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica','normal');
+  doc.text('This is an official document generated by BrightFuture University Admissions System.',W/2,pageH-18,{align:'center'});
+  doc.text('For verification, contact admissions@brightfuture.edu',W/2,pageH-12,{align:'center'});
+  doc.text('© 2026 BrightFuture University. All rights reserved.',W/2,pageH-6,{align:'center'});
+
+  // Save & upload
+  const fileName = `BFU_${isApproved?'APPROVAL':isRejected?'REJECTION':'REVIEW'}_${d.full_name?.replace(/\s+/g,'_')||'Applicant'}_${appId.substring(0,8)}.pdf`;
+  // Download locally
+  doc.save(fileName);
+  // Upload to storage and save URL
+  const pdfBlob = doc.output('blob');
+  const path = `results/${appId}_${Date.now()}.pdf`;
+  const {error:ue} = await sb.storage.from('uploads').upload(path, pdfBlob, {upsert:true, contentType:'application/pdf'});
+  if(!ue){
+    const {data:ud} = sb.storage.from('uploads').getPublicUrl(path);
+    const pdfUrl = ud.publicUrl||'';
+    if(pdfUrl){
+      await sb.from('applications').update({result_file_url:pdfUrl}).eq('id',appId);
+      // Notify user
+      if(app.user_id){
+        await sb.from('notifications').insert({user_id:app.user_id,title:'📄 Your Decision Document is Ready',message:`Your application decision PDF has been generated. You can now download it from your dashboard.`,created_at:new Date().toISOString()});
+      }
+      toast('PDF generated, uploaded & sent to applicant!','success');
+      loadAdminPanel();
+      return;
+    }
+  }
+  toast('PDF downloaded. Storage upload may have failed — check bucket settings.','warning');
+}
+
+// ══════════════════════════════════════════════════════════
+// TESTIMONIALS CAROUSEL
+// ══════════════════════════════════════════════════════════
+let carouselIdx=0;
+const testInner=document.querySelector('.testimonials-inner');
+const testCards=testInner?.querySelectorAll('.testimonial-card');
+function slideCarousel(dir){
+  if(!testCards) return;
+  const visible=window.innerWidth<600?1:window.innerWidth<900?2:3;
+  const max=testCards.length-visible;
+  carouselIdx=Math.max(0,Math.min(carouselIdx+dir,max));
+  const w=testCards[0].offsetWidth+26;
+  testInner.style.transform=`translateX(-${carouselIdx*w}px)`;
+}
+
+// ══════════════════════════════════════════════════════════
+// SETUP: Create Supabase tables via SQL (run once)
+// ══════════════════════════════════════════════════════════
+// NOTE: Run this SQL in Supabase Dashboard → SQL Editor:
+/*
+-- Profiles table
+create table if not exists profiles (
+  id uuid references auth.users primary key,
+  full_name text, email text, phone text, address text,
+  role text default 'user', avatar_url text, created_at timestamptz default now()
+);
+alter table profiles enable row level security;
+create policy "Users can read own profile" on profiles for select using (auth.uid() = id);
+create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
+create policy "Users can insert own profile" on profiles for insert with check (auth.uid() = id);
+create policy "Admins can read all profiles" on profiles for select using (
+  exists(select 1 from profiles where id=auth.uid() and role='admin')
+);
+
+-- Applications table
+create table if not exists applications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  status text default 'pending',
+  form_data jsonb, documents jsonb,
+  result_file_url text, admin_feedback text default '',
+  reviewed_by uuid, reviewed_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table applications enable row level security;
+create policy "Users read own apps" on applications for select using (auth.uid() = user_id);
+create policy "Users insert own apps" on applications for insert with check (auth.uid() = user_id);
+create policy "Admins read all apps" on applications for select using (
+  exists(select 1 from profiles where id=auth.uid() and role='admin')
+);
+create policy "Admins update apps" on applications for update using (
+  exists(select 1 from profiles where id=auth.uid() and role='admin')
+);
+
+-- Notifications table
+create table if not exists notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  title text, message text,
+  read boolean default false,
+  created_at timestamptz default now()
+);
+alter table notifications enable row level security;
+create policy "Users read own notifications" on notifications for select using (auth.uid() = user_id);
+create policy "Anyone can insert notifications" on notifications for insert with check (true);
+
+-- Storage bucket: create 'uploads' bucket in Storage dashboard (public)
+-- Set admin role: update profiles set role = 'admin' where email = 'your@email.com';
+*/
+</script>
+</body>
+</html>
